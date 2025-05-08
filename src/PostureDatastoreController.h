@@ -4,9 +4,9 @@
 
 #include "api.h"
 
-struct NewFSMController_DLLAPI NewFSMController : public mc_control::fsm::Controller
+struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_control::fsm::Controller
 {
-  NewFSMController(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
+  PostureDatastoreController(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
 
   bool run() override;
 
