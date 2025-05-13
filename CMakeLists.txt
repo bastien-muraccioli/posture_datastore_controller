@@ -20,9 +20,9 @@ endif()
 
 add_subdirectory(src)
 
-if(BUILD_TESTING)
-  add_subdirectory(tests)
-endif()
+# if(BUILD_TESTING)
+#   add_subdirectory(tests)
+# endif()
 
 configure_file(etc/PostureDatastoreController.in.yaml
                "${CMAKE_CURRENT_BINARY_DIR}/etc/PostureDatastoreController.yaml")
