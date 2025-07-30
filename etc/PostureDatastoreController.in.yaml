@@ -30,7 +30,14 @@ collisions:
 states: {}
 # Transitions map
 transitions:
-- [PostureDatastoreController_Initial, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_TorqueControl, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_PositionControl, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_PureRL, OK, PostureDatastoreController_Initial, Strict]
+
+- [PostureDatastoreController_Initial, TorqueControl, PostureDatastoreController_TorqueControl, Strict]
+- [PostureDatastoreController_Initial, PositionControl, PostureDatastoreController_PositionControl, Strict]
+- [PostureDatastoreController_Initial, PureRL, PostureDatastoreController_PureRL, Strict]
+
 # Initial state
 init: PostureDatastoreController_Initial
 
@@ -42,4 +49,96 @@ ObserverPipelines:
       - type: Encoder
         config:
           velocity: encoderVelocities
+
+kp_torque:
+    joint_1: 40.0
+    joint_2: 40.0
+    joint_3: 40.0
+    joint_4: 40.0
+    joint_5: 15.0
+    joint_6: 15.0
+    joint_7: 15.0
+
+kd_torque:
+    joint_1: 15.0
+    joint_2: 15.0
+    joint_3: 15.0
+    joint_4: 15.0
+    joint_5: 8.5
+    joint_6: 8.5
+    joint_7: 8.5
+
+kp_position:
+  joint_1: 25000
+  joint_2: 25000
+  joint_3: 25000
+  joint_4: 25000
+  joint_5: 15000
+  joint_6: 15000
+  joint_7: 15000
+
+kd_position:
+  joint_1: 1
+  joint_2: 1
+  joint_3: 1
+  joint_4: 1
+  joint_5: 0.1
+  joint_6: 0.1
+  joint_7: 0.1
+
+
+# kp:
+#   joint_1: 3000
+#   joint_2: 50000
+#   joint_3: 3000
+#   joint_4: 50000
+#   joint_5: 750
+#   joint_6: 5000
+#   joint_7: 100
+
+# kd:
+#   joint_1: 2
+#   joint_2: 0
+#   joint_3: 0
+#   joint_4: 0
+#   joint_5: 0.2
+#   joint_6: 1
+#   joint_7: 0
+
+# kp:
+#   joint_1: 1500
+#   joint_2: 1500
+#   joint_3: 1500
+#   joint_4: 1500
+#   joint_5: 100
+#   joint_6: 100
+#   joint_7: 100
+
+# kd:
+#   joint_1: 25
+#   joint_2: 25
+#   joint_3: 25
+#   joint_4: 25
+#   joint_5: 2
+#   joint_6: 2
+#   joint_7: 2
+
+# kp:
+#   joint_1: 5000
+#   joint_2: 5000
+#   joint_3: 5000
+#   joint_4: 5000
+#   joint_5: 2000
+#   joint_6: 2000
+#   joint_7: 2000
+
+# kd:
+#   joint_1: 0
+#   joint_2: 0
+#   joint_3: 0
+#   joint_4: 0
+#   joint_5: 0
+#   joint_6: 0
+#   joint_7: 0
+
 

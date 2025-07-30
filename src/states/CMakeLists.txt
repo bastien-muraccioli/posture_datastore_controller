@@ -1,3 +1,6 @@
 add_fsm_state_simple(PostureDatastoreController_Initial)
+add_fsm_state_simple(PostureDatastoreController_TorqueControl)
+add_fsm_state_simple(PostureDatastoreController_PositionControl)
+add_fsm_state_simple(PostureDatastoreController_PureRL)
 
 add_fsm_data_directory(data)

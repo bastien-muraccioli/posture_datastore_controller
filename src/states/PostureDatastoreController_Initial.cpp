@@ -7,21 +7,37 @@ void PostureDatastoreController_Initial::configure(const mc_rtc::Configuration &
 void PostureDatastoreController_Initial::start(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
-  // ctl.compPostureTask->damping(100);
+  ctl.compPostureTask->reset();
+  ctl.compPostureTask->stiffness(ctl.stiffnessMin);
 }
 
 bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   
-  if (ctl.datastore().has("ros_posture_pub_sub"))
+  if(isRobotStopped && !isReachedTarget)
   {
-    auto posture = ctl.datastore().get<std::map<std::string, std::vector<double>>>("ros_posture_pub_sub");
-    if (posture.size() > 0)
+    ctl.stiffnessAdjustment();
+    if(ctl.compPostureTask->eval().norm() < 0.05)
     {
-      ctl.compPostureTask->target(posture);
+      mc_rtc::log::info("[PostureDatastoreController_Initial] Target position reached, ready to change state");
+      isReachedTarget = true;
+      ctl.datastore().assign<std::string>("ControlMode", "Position");
     }
-  }  
+  }
+
+  if(!isRobotStopped)
+  {
+    ctl.stiffnessAdjustment();
+    if(ctl.compPostureTask->eval().norm() < 0.05)
+    {
+      mc_rtc::log::info("[PostureDatastoreController_Initial] Robot is stopped, go back to the initial posture");
+      isRobotStopped = true;
+      ctl.datastore().assign<std::string>("ControlMode", "Torque");
+      ctl.compPostureTask->stiffness(ctl.stiffnessMin);
+      ctl.compPostureTask->target(ctl.posture);
+    }
+  }
   // output("OK");
   return false;
 }
