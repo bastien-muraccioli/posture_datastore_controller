@@ -9,6 +9,7 @@ void PostureDatastoreController_Initial::start(mc_control::fsm::Controller & ctl
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.compPostureTask->reset();
   ctl.compPostureTask->stiffness(ctl.stiffnessMin);
+  ctl.solver().addTask(ctl.compPostureTask);
 }
 
 bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
@@ -22,7 +23,7 @@ bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
     {
       mc_rtc::log::info("[PostureDatastoreController_Initial] Target position reached, ready to change state");
       isReachedTarget = true;
-      ctl.datastore().assign<std::string>("ControlMode", "Position");
+      ctl.datastore().assign<std::string>("ControlMode", "Torque");
     }
   }
 
@@ -45,6 +46,7 @@ bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
 void PostureDatastoreController_Initial::teardown(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
+  ctl.solver().removeTask(ctl.compPostureTask);
 }
 
 EXPORT_SINGLE_STATE("PostureDatastoreController_Initial", PostureDatastoreController_Initial)

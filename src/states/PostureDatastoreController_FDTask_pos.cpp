@@ -1,10 +1,10 @@
-#include "PostureDatastoreController_PositionControl.h"
+#include "PostureDatastoreController_FDTask_pos.h"
 
 #include "../PostureDatastoreController.h"
 
-void PostureDatastoreController_PositionControl::configure(const mc_rtc::Configuration & config) {}
+void PostureDatastoreController_FDTask_pos::configure(const mc_rtc::Configuration & config) {}
 
-void PostureDatastoreController_PositionControl::start(mc_control::fsm::Controller & ctl_)
+void PostureDatastoreController_FDTask_pos::start(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.datastore().assign<std::string>("ControlMode", "Position");
@@ -15,10 +15,12 @@ void PostureDatastoreController_PositionControl::start(mc_control::fsm::Controll
   ctl.isRLQP = true;
   ctl.compPostureTask->stiffness(0.0);
   ctl.compPostureTask->damping(0.0);
-  ctl.torqueTask();
+  ctl.FDTask();
+  ctl.compPostureTask->refAccel(ctl.refAccel);
+  ctl.solver().addTask(ctl.compPostureTask);
 }
 
-bool PostureDatastoreController_PositionControl::run(mc_control::fsm::Controller & ctl_)
+bool PostureDatastoreController_FDTask_pos::run(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
                       
@@ -40,18 +42,20 @@ bool PostureDatastoreController_PositionControl::run(mc_control::fsm::Controller
       }
     }
   }
-  ctl.torqueTask();  
+  ctl.FDTask();
+  ctl.compPostureTask->refAccel(ctl.refAccel);
   
   // output("OK");
   return false;
 }
 
-void PostureDatastoreController_PositionControl::teardown(mc_control::fsm::Controller & ctl_)
+void PostureDatastoreController_FDTask_pos::teardown(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.isRLQP = false;
+  ctl.solver().removeTask(ctl.compPostureTask);
 }
 
 
 
-EXPORT_SINGLE_STATE("PostureDatastoreController_PositionControl", PostureDatastoreController_PositionControl)
+EXPORT_SINGLE_STATE("PostureDatastoreController_FDTask_pos", PostureDatastoreController_FDTask_pos)

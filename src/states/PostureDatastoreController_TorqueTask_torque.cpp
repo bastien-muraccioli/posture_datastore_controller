@@ -1,10 +1,10 @@
-#include "PostureDatastoreController_TorqueControl.h"
+#include "PostureDatastoreController_TorqueTask_torque.h"
 
 #include "../PostureDatastoreController.h"
 
-void PostureDatastoreController_TorqueControl::configure(const mc_rtc::Configuration & config) {}
+void PostureDatastoreController_TorqueTask_torque::configure(const mc_rtc::Configuration & config) {}
 
-void PostureDatastoreController_TorqueControl::start(mc_control::fsm::Controller & ctl_)
+void PostureDatastoreController_TorqueTask_torque::start(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.datastore().assign<std::string>("ControlMode", "Torque");
@@ -14,10 +14,12 @@ void PostureDatastoreController_TorqueControl::start(mc_control::fsm::Controller
   ctl.kd_value = ctl.kd_vector[0];
   ctl.compPostureTask->stiffness(0.0);
   ctl.compPostureTask->damping(0.0);
-  ctl.torqueTask();
+  ctl.FDTask();
+  ctl.torqueTask->target(ctl.torque);
+  ctl.solver().addTask(ctl.torqueTask);
 }
 
-bool PostureDatastoreController_TorqueControl::run(mc_control::fsm::Controller & ctl_)
+bool PostureDatastoreController_TorqueTask_torque::run(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
                       
@@ -39,15 +41,16 @@ bool PostureDatastoreController_TorqueControl::run(mc_control::fsm::Controller &
       }
     }
   }
-  ctl.torqueTask();  
-  
+  ctl.FDTask();  
+  ctl.torqueTask->target(ctl.torque);
   // output("OK");
   return false;
 }
 
-void PostureDatastoreController_TorqueControl::teardown(mc_control::fsm::Controller & ctl_)
+void PostureDatastoreController_TorqueTask_torque::teardown(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
+  ctl.solver().removeTask(ctl.torqueTask);
 }
 
-EXPORT_SINGLE_STATE("PostureDatastoreController_TorqueControl", PostureDatastoreController_TorqueControl)
+EXPORT_SINGLE_STATE("PostureDatastoreController_TorqueTask_torque", PostureDatastoreController_TorqueTask_torque)

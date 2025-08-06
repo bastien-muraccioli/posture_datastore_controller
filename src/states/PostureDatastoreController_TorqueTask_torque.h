@@ -2,7 +2,7 @@
 
 #include <mc_control/fsm/State.h>
 
-struct PostureDatastoreController_TorqueControl : mc_control::fsm::State
+struct PostureDatastoreController_TorqueTask_torque : mc_control::fsm::State
 {
 
   void configure(const mc_rtc::Configuration & config) override;

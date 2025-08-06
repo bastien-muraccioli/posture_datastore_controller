@@ -2,7 +2,7 @@
 
 #include <mc_control/fsm/Controller.h>
 #include <mc_tasks/CompliantPostureTask.h>
-#include <mc_tasks/EndEffectorTask.h>
+#include <mc_tasks/TorqueTask.h>
 
 #include "api.h"
 #include <Eigen/src/Core/Matrix.h>
@@ -15,17 +15,27 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
 
   void reset(const mc_control::ControllerResetData & reset_data) override;
 
+  std::string tool_frame;
+
   std::map<std::string, std::vector<double>> posture;
+  std::map<std::string, std::vector<double>> torque;
   std::shared_ptr<mc_tasks::CompliantPostureTask> compPostureTask;
-  std::shared_ptr<mc_tasks::EndEffectorTask> endEffectorTask_pt1;
-  std::shared_ptr<mc_tasks::EndEffectorTask> endEffectorTask_pt2;
-  std::shared_ptr<mc_tasks::EndEffectorTask> endEffectorTask_pt3;
+  std::shared_ptr<mc_tasks::TorqueTask> torqueTask;
 
   Eigen::Vector3d endEffectorTarget_pt1;
   Eigen::Vector3d endEffectorTarget_pt2;
   Eigen::Vector3d endEffectorTarget_pt3;
+  Eigen::Vector3d distance_pt1;
+  Eigen::Vector3d distance_pt2;
+  Eigen::Vector3d distance_pt3;
 
-  void torqueTask(void);
+  Eigen::Vector3d endEffectorTarget_pos;
+
+  double distance_pt1_norm = 0.0;
+  double distance_pt2_norm = 0.0;
+  double distance_pt3_norm = 0.0;
+
+  void FDTask(void);
 
   // std::shared_ptr<mc_tasks::PostureTask> FSMPostureTask;
   // std::shared_ptr<mc_tasks::PostureTask> similiTorqueTask;
@@ -72,6 +82,9 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
 
   double counter = 0.0; // Counter for the frequency of posture updates
   double t = 1.0; // end point at t=1 second.
+
+  bool compensateExternalForces = false; // Flag to indicate if the torque task should compensate external forces
+  bool compensateExternalForcesHasChanged = false; // Flag to indicate if the external force compensation has changed
 
 private:
   mc_rtc::Configuration config_;

@@ -30,12 +30,20 @@ collisions:
 states: {}
 # Transitions map
 transitions:
-- [PostureDatastoreController_TorqueControl, OK, PostureDatastoreController_Initial, Strict]
-- [PostureDatastoreController_PositionControl, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_TorqueTask_torque, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_TorqueTask_torque_extForce, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_TorqueTask_pos, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_FDTask_torque, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_FDTask_torque_extForce, OK, PostureDatastoreController_Initial, Strict]
+- [PostureDatastoreController_FDTask_pos, OK, PostureDatastoreController_Initial, Strict]
 - [PostureDatastoreController_PureRL, OK, PostureDatastoreController_Initial, Strict]
 
-- [PostureDatastoreController_Initial, TorqueControl, PostureDatastoreController_TorqueControl, Strict]
-- [PostureDatastoreController_Initial, PositionControl, PostureDatastoreController_PositionControl, Strict]
+- [PostureDatastoreController_Initial, TorqueTask_torque, PostureDatastoreController_TorqueTask_torque, Strict]
+- [PostureDatastoreController_Initial, TorqueTask_torque_extForce, PostureDatastoreController_TorqueTask_torque_extForce, Strict]
+- [PostureDatastoreController_Initial, TorqueTask_pos, PostureDatastoreController_TorqueTask_pos, Strict]
+- [PostureDatastoreController_Initial, FDTask_torque, PostureDatastoreController_FDTask_torque, Strict]
+- [PostureDatastoreController_Initial, FDTask_torque_extForce, PostureDatastoreController_FDTask_torque_extForce, Strict]
+- [PostureDatastoreController_Initial, FDTask_pos, PostureDatastoreController_FDTask_pos, Strict]
 - [PostureDatastoreController_Initial, PureRL, PostureDatastoreController_PureRL, Strict]
 
 # Initial state
