@@ -12,13 +12,8 @@ void PostureDatastoreController_TorqueTask_torque_extForce::start(mc_control::fs
   ctl.kd_vector = ctl.kd_torque_vector;
   ctl.kp_value = ctl.kp_vector[0];
   ctl.kd_value = ctl.kd_vector[0];
-  ctl.compPostureTask->stiffness(0.0);
-  ctl.compPostureTask->damping(0.0);
   ctl.FDTask();
   ctl.torqueTask->target(ctl.torque);
-  if (!ctl.datastore().call<bool>("EF_Estimator::isActive")) {
-    ctl.datastore().call("EF_Estimator::toggleActive");
-  }
   ctl.compensateExternalForces = true; // Enable external force compensation
   ctl.torqueTask->compensateExternalForces(ctl.compensateExternalForces);
   ctl.solver().addTask(ctl.torqueTask);
@@ -55,9 +50,6 @@ bool PostureDatastoreController_TorqueTask_torque_extForce::run(mc_control::fsm:
 void PostureDatastoreController_TorqueTask_torque_extForce::teardown(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
-  if (ctl.datastore().call<bool>("EF_Estimator::isActive")) {
-    ctl.datastore().call("EF_Estimator::toggleActive");
-  }
   ctl.compensateExternalForces = false; // Disable external force compensation
   ctl.torqueTask->compensateExternalForces(ctl.compensateExternalForces);
   ctl.solver().removeTask(ctl.torqueTask);

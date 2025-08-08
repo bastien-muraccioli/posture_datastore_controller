@@ -2,6 +2,7 @@
 
 #include <mc_control/fsm/Controller.h>
 #include <mc_tasks/CompliantPostureTask.h>
+#include <mc_tasks/PostureTask.h>
 #include <mc_tasks/TorqueTask.h>
 
 #include "api.h"
@@ -19,7 +20,7 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
 
   std::map<std::string, std::vector<double>> posture;
   std::map<std::string, std::vector<double>> torque;
-  std::shared_ptr<mc_tasks::CompliantPostureTask> compPostureTask;
+  std::shared_ptr<mc_tasks::PostureTask> compPostureTask;
   std::shared_ptr<mc_tasks::TorqueTask> torqueTask;
 
   Eigen::Vector3d endEffectorTarget_pt1;

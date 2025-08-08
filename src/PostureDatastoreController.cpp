@@ -14,7 +14,7 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
   selfCollisionConstraint->setCollisionsDampers(solver(), {1.8, 70.0});
   solver().removeConstraintSet(dynamicsConstraint);
   dynamicsConstraint = mc_rtc::unique_ptr<mc_solver::DynamicsConstraint>(
-    new mc_solver::DynamicsConstraint(robots(), 0, {0.1, 0.01, 0.0, 1.8, 70.0}, 0.9, false));
+    new mc_solver::DynamicsConstraint(robots(), 0, {0.1, 0.01, 0.0, 1.8, 70.0}, 0.9, true));
   solver().addConstraintSet(dynamicsConstraint);
 
   // Default posture target
@@ -97,7 +97,7 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
   // Remove the default posture task created by the FSM
   solver().removeTask(getPostureTask(robot().name()));
 
-  compPostureTask = std::make_shared<mc_tasks::CompliantPostureTask>(solver(), robot().robotIndex(), 1, 1);
+  compPostureTask = std::make_shared<mc_tasks::PostureTask>(solver(), robot().robotIndex(), 1, 1);
   compPostureTask->target(posture);
   // compPostureTask->stiffness(stiffnessMin);
   // solver().addTask(compPostureTask);
@@ -176,10 +176,6 @@ bool PostureDatastoreController::run()
   if(compensateExternalForcesHasChanged != compensateExternalForces)
   {
     mc_rtc::log::info("[PostureDatastoreController] Compensate external forces: {}", compensateExternalForces);
-    solver().removeConstraintSet(dynamicsConstraint);
-    dynamicsConstraint = mc_rtc::unique_ptr<mc_solver::DynamicsConstraint>(
-      new mc_solver::DynamicsConstraint(robots(), 0, {0.1, 0.01, 0.0, 1.8, 70.0}, 0.9, compensateExternalForces));
-    solver().addConstraintSet(dynamicsConstraint);
     compensateExternalForcesHasChanged = compensateExternalForces; // Update the flag to the current state
   }
 
@@ -223,7 +219,7 @@ bool PostureDatastoreController::run()
       //   externalTorques = torques;
       // }
       Eigen::VectorXd externalTorques = Eigen::VectorXd::Zero(dofNumber);
-      if(compensateExternalForces)
+      if(!compensateExternalForces)
       {
         auto extTorqueSensor = robot().device<mc_rbdyn::VirtualTorqueSensor>("ExtTorquesVirtSensor");
          externalTorques = extTorqueSensor.torques();
@@ -317,7 +313,7 @@ void PostureDatastoreController::FDTask(void)
     i++;
   }
 
-  if(compensateExternalForces)
+  if(!compensateExternalForces)
   {
     auto extTorqueSensor = robot.device<mc_rbdyn::VirtualTorqueSensor>("ExtTorquesVirtSensor");
     Eigen::VectorXd externalTorques = extTorqueSensor.torques();

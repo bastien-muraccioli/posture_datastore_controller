@@ -7,6 +7,9 @@ void PostureDatastoreController_Initial::configure(const mc_rtc::Configuration &
 void PostureDatastoreController_Initial::start(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
+  if (!ctl.datastore().call<bool>("EF_Estimator::isActive")) {
+    ctl.datastore().call("EF_Estimator::toggleActive");
+  }
   ctl.compPostureTask->reset();
   ctl.compPostureTask->stiffness(ctl.stiffnessMin);
   ctl.solver().addTask(ctl.compPostureTask);

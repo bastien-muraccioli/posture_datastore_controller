@@ -8,9 +8,6 @@ void PostureDatastoreController_FDTask_torque_extForce::start(mc_control::fsm::C
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.datastore().assign<std::string>("ControlMode", "Torque");
-  if (!ctl.datastore().call<bool>("EF_Estimator::isActive")) {
-    ctl.datastore().call("EF_Estimator::toggleActive");
-  }
   ctl.kp_vector = ctl.kp_torque_vector;
   ctl.kd_vector = ctl.kd_torque_vector;
   ctl.kp_value = ctl.kp_vector[0];
@@ -56,9 +53,6 @@ void PostureDatastoreController_FDTask_torque_extForce::teardown(mc_control::fsm
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.solver().removeTask(ctl.compPostureTask);
-  if (ctl.datastore().call<bool>("EF_Estimator::isActive")) {
-    ctl.datastore().call("EF_Estimator::toggleActive");
-  }
   ctl.compensateExternalForces = false;
 }
 
