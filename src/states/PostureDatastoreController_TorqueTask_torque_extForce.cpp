@@ -8,12 +8,12 @@ void PostureDatastoreController_TorqueTask_torque_extForce::start(mc_control::fs
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.datastore().assign<std::string>("ControlMode", "Torque");
-  ctl.kp_vector = ctl.kp_torque_vector;
-  ctl.kd_vector = ctl.kd_torque_vector;
-  ctl.kp_value = ctl.kp_vector[0];
-  ctl.kd_value = ctl.kd_vector[0];
-  ctl.FDTask();
-  ctl.torqueTask->target(ctl.torque);
+  ctl.current_kp = ctl.kp_policy;
+  ctl.current_kd = ctl.kd_policy;
+  ctl.kp_value = ctl.current_kp[0];
+  ctl.kd_value = ctl.current_kd[0];
+  ctl.tasksComputation();
+  ctl.torqueTask->target(ctl.torque_target);
   ctl.compensateExternalForces = true; // Enable external force compensation
   ctl.torqueTask->compensateExternalForces(ctl.compensateExternalForces);
   ctl.solver().addTask(ctl.torqueTask);
@@ -34,17 +34,18 @@ bool PostureDatastoreController_TorqueTask_torque_extForce::run(mc_control::fsm:
         if(j.type() == rbd::Joint::Type::Rev)
         {
           if (const auto &t = posture[joint_name]; !t.empty()) {
-              ctl.refPos[i] = t[0];
+              ctl.q_rl[i] = t[0];
               i++;
           }
         }
       }
     }
   }
-  ctl.FDTask();  
-  ctl.torqueTask->target(ctl.torque);
-  // output("OK");
-  return false;
+  ctl.tasksComputation();  
+  ctl.torqueTask->target(ctl.torque_target);
+
+  output("T");
+  return ctl.countPtReached();
 }
 
 void PostureDatastoreController_TorqueTask_torque_extForce::teardown(mc_control::fsm::Controller & ctl_)
@@ -53,6 +54,7 @@ void PostureDatastoreController_TorqueTask_torque_extForce::teardown(mc_control:
   ctl.compensateExternalForces = false; // Disable external force compensation
   ctl.torqueTask->compensateExternalForces(ctl.compensateExternalForces);
   ctl.solver().removeTask(ctl.torqueTask);
+  ctl.cleanState();
 }
 
 EXPORT_SINGLE_STATE("PostureDatastoreController_TorqueTask_torque_extForce", PostureDatastoreController_TorqueTask_torque_extForce)

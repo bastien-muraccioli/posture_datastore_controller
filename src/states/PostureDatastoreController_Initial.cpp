@@ -10,9 +10,9 @@ void PostureDatastoreController_Initial::start(mc_control::fsm::Controller & ctl
   if (!ctl.datastore().call<bool>("EF_Estimator::isActive")) {
     ctl.datastore().call("EF_Estimator::toggleActive");
   }
-  ctl.compPostureTask->reset();
-  ctl.compPostureTask->stiffness(ctl.stiffnessMin);
-  ctl.solver().addTask(ctl.compPostureTask);
+  ctl.postureTask->reset();
+  ctl.postureTask->stiffness(ctl.stiffnessMin);
+  ctl.solver().addTask(ctl.postureTask);
 }
 
 bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
@@ -22,7 +22,7 @@ bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
   if(isRobotStopped && !isReachedTarget)
   {
     ctl.stiffnessAdjustment();
-    if(ctl.compPostureTask->eval().norm() < 0.05)
+    if(ctl.postureTask->eval().norm() < 0.05)
     {
       mc_rtc::log::info("[PostureDatastoreController_Initial] Target position reached, ready to change state");
       isReachedTarget = true;
@@ -33,13 +33,12 @@ bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
   if(!isRobotStopped)
   {
     ctl.stiffnessAdjustment();
-    if(ctl.compPostureTask->eval().norm() < 0.05)
+    if(ctl.postureTask->eval().norm() < 0.05)
     {
       mc_rtc::log::info("[PostureDatastoreController_Initial] Robot is stopped, go back to the initial posture");
       isRobotStopped = true;
-      ctl.datastore().assign<std::string>("ControlMode", "Torque");
-      ctl.compPostureTask->stiffness(ctl.stiffnessMin);
-      ctl.compPostureTask->target(ctl.posture);
+      ctl.postureTask->stiffness(ctl.stiffnessMin);
+      ctl.postureTask->target(ctl.posture_init_rl);
     }
   }
   // output("OK");
@@ -49,7 +48,7 @@ bool PostureDatastoreController_Initial::run(mc_control::fsm::Controller & ctl_)
 void PostureDatastoreController_Initial::teardown(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
-  ctl.solver().removeTask(ctl.compPostureTask);
+  ctl.solver().removeTask(ctl.postureTask);
 }
 
 EXPORT_SINGLE_STATE("PostureDatastoreController_Initial", PostureDatastoreController_Initial)

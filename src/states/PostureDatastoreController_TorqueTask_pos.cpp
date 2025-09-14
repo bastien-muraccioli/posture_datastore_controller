@@ -8,15 +8,15 @@ void PostureDatastoreController_TorqueTask_pos::start(mc_control::fsm::Controlle
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.datastore().assign<std::string>("ControlMode", "Position");
-  ctl.kp_vector = ctl.kp_position_vector;
-  ctl.kd_vector = ctl.kd_position_vector;
-  ctl.kp_value = ctl.kp_vector[0];
-  ctl.kd_value = ctl.kd_vector[0];
+  ctl.current_kp = ctl.kp_robot;
+  ctl.current_kd = ctl.kd_robot;
+  ctl.kp_value = ctl.current_kp[0];
+  ctl.kd_value = ctl.current_kd[0];
   ctl.isRLQP = true;
-  ctl.compPostureTask->stiffness(0.0);
-  ctl.compPostureTask->damping(0.0);
-  ctl.FDTask();
-  ctl.torqueTask->target(ctl.torque);
+  ctl.postureTask->stiffness(0.0);
+  ctl.postureTask->damping(0.0);
+  ctl.tasksComputation();
+  ctl.torqueTask->target(ctl.torque_target);
   ctl.solver().addTask(ctl.torqueTask);
 }
 
@@ -35,15 +35,15 @@ bool PostureDatastoreController_TorqueTask_pos::run(mc_control::fsm::Controller 
         if(j.type() == rbd::Joint::Type::Rev)
         {
           if (const auto &t = posture[joint_name]; !t.empty()) {
-              ctl.refPos[i] = t[0];
+              ctl.q_rl[i] = t[0];
               i++;
           }
         }
       }
     }
   }
-  ctl.FDTask();  
-  ctl.torqueTask->target(ctl.torque);
+  ctl.tasksComputation();  
+  ctl.torqueTask->target(ctl.torque_target);
   // output("OK");
   return false;
 }

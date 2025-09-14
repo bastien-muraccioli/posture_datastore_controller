@@ -8,16 +8,16 @@ void PostureDatastoreController_FDTask_torque_extForce::start(mc_control::fsm::C
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.datastore().assign<std::string>("ControlMode", "Torque");
-  ctl.kp_vector = ctl.kp_torque_vector;
-  ctl.kd_vector = ctl.kd_torque_vector;
-  ctl.kp_value = ctl.kp_vector[0];
-  ctl.kd_value = ctl.kd_vector[0];
-  ctl.compPostureTask->stiffness(0.0);
-  ctl.compPostureTask->damping(0.0);
+  ctl.current_kp = ctl.kp_policy;
+  ctl.current_kd = ctl.kd_policy;
+  ctl.kp_value = ctl.current_kp[0];
+  ctl.kd_value = ctl.current_kd[0];
+  ctl.postureTask->stiffness(0.0);
+  ctl.postureTask->damping(0.0);
   ctl.compensateExternalForces = true; // Enable external force compensation
-  ctl.FDTask();
-  ctl.compPostureTask->refAccel(ctl.refAccel);
-  ctl.solver().addTask(ctl.compPostureTask);
+  ctl.tasksComputation();
+  ctl.postureTask->refAccel(ctl.refAccel);
+  ctl.solver().addTask(ctl.postureTask);
 }
 
 bool PostureDatastoreController_FDTask_torque_extForce::run(mc_control::fsm::Controller & ctl_)
@@ -35,25 +35,25 @@ bool PostureDatastoreController_FDTask_torque_extForce::run(mc_control::fsm::Con
         if(j.type() == rbd::Joint::Type::Rev)
         {
           if (const auto &t = posture[joint_name]; !t.empty()) {
-              ctl.refPos[i] = t[0];
+              ctl.q_rl[i] = t[0];
               i++;
           }
         }
       }
     }
   }
-  ctl.FDTask();  
-  ctl.compPostureTask->refAccel(ctl.refAccel);
-  
-  // output("OK");
-  return false;
+  ctl.tasksComputation();  
+  ctl.postureTask->refAccel(ctl.refAccel);
+
+  output("FD");
+  return ctl.countPtReached();
 }
 
 void PostureDatastoreController_FDTask_torque_extForce::teardown(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
-  ctl.solver().removeTask(ctl.compPostureTask);
-  ctl.compensateExternalForces = false;
+  ctl.solver().removeTask(ctl.postureTask);
+  ctl.cleanState();
 }
 
 EXPORT_SINGLE_STATE("PostureDatastoreController_FDTask_torque_extForce", PostureDatastoreController_FDTask_torque_extForce)
