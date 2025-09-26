@@ -32,9 +32,9 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
   endEffectorTarget_pt2 = Eigen::Vector3d(0.4, -0.15, 0.3);
   endEffectorTarget_pt3 = Eigen::Vector3d(0.6, 0.1, 0.45);
 
-  endEffectorTarget_pt1_OOD = Eigen::Vector3d(0.4, 0.1, 0.35);
-  endEffectorTarget_pt2_OOD = Eigen::Vector3d(0.35, -0.2, 0.5);
-  endEffectorTarget_pt3_OOD = Eigen::Vector3d(0.3, 0.2, 0.45);
+  endEffectorTarget_pt1_OOD = Eigen::Vector3d(0.407, 0.087, 0.355);
+  endEffectorTarget_pt2_OOD = Eigen::Vector3d(0.357, -0.241, 0.503);
+  endEffectorTarget_pt3_OOD = Eigen::Vector3d(0.153, 0.181, 0.297);
 
   // endEffectorTarget_pt1_biased_by_posture
 
