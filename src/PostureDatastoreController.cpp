@@ -252,16 +252,28 @@ void PostureDatastoreController::tasksComputation(void)
   // Acceleration End-Effector Task
   const mc_rbdyn::RobotFrame & frame_tool = robot.frame(tool_frame);
   rbd::Jacobian jac_tool(robot.mb(), frame_tool.body());
+
+  // Compute Jacobian in body frame
   Eigen::MatrixXd J_tool = jac_tool.jacobian(robot.mb(), robot.mbc(), frame_tool.X_b_f());
-  sva::MotionVecd current_acc_tool = jac_tool.normalAcceleration(
-                      robot.mb(),
-                      robot.mbc(),
-                      robot.bodyAccB(),   // base normal acceleration = 0
-                      frame_tool.X_b_f(),    // transformation from body to tool frame
-                      sva::MotionVecd::Zero()    // acceleration of the point in body coordinates = 0
-                  );
-  Eigen::Vector6d acc = J_tool * refAccel + current_acc_tool.vector();
-  accEETask_target = sva::MotionVecd(acc.head(3), acc.tail(3));
+
+  // Compute current bias (normal) acceleration term
+  sva::MotionVecd current_acc_tool = jac_tool.bodyNormalAcceleration(robot.mb(), robot.mbc());
+
+  mc_rtc::log::info("[EE Acc Task] Current EE acceleration: {}", current_acc_tool.vector().transpose());
+
+  // Compute desired end-effector acceleration (in body frame)
+  Eigen::Vector6d acc_tool = J_tool * refAccel + current_acc_tool.vector();
+
+  // Convert to world frame
+  Eigen::Matrix3d R = real_robot.bodyPosW(frame_tool.body()).rotation();
+  Eigen::MatrixXd Adt = Eigen::MatrixXd::Zero(6,6);
+  Adt.topLeftCorner<3,3>() = R;
+  Adt.bottomRightCorner<3,3>() = R;
+  Eigen::Vector6d acc_world = Adt * acc_tool;
+
+  // Log & set reference
+  mc_rtc::log::info("[EE Acc Task] Target EE acceleration: {}", acc_world.transpose());
+  accEETask_target = sva::MotionVecd(acc_world.head<3>(), acc_world.tail<3>());
 }
 
 void PostureDatastoreController::stiffnessAdjustment(void)

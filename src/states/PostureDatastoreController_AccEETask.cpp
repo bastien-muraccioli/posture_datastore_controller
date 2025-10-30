@@ -13,10 +13,10 @@ void PostureDatastoreController_AccEETask::start(mc_control::fsm::Controller & c
   ctl.kp_value = ctl.current_kp[0];
   ctl.kd_value = ctl.current_kd[0];
   ctl.postureTask->stiffness(0.0);
-  ctl.postureTask->damping(0.0);
+  ctl.postureTask->damping(2.0);
   ctl.tasksComputation();
   ctl.accEETask->refAccel(ctl.accEETask_target);
-  ctl.postureTask->refAccel(ctl.refAccel);
+  // ctl.postureTask->refAccel(ctl.refAccel);
   ctl.postureTask->weight(1.0);
   ctl.solver().addTask(ctl.postureTask);
   ctl.solver().addTask(ctl.accEETask);
@@ -45,14 +45,14 @@ bool PostureDatastoreController_AccEETask::run(mc_control::fsm::Controller & ctl
     }
   }
   ctl.tasksComputation();  
-  ctl.postureTask->refAccel(ctl.refAccel);
-  ctl.solver().addTask(ctl.accEETask);
+  // ctl.postureTask->refAccel(ctl.refAccel);
+  ctl.accEETask->refAccel(ctl.accEETask_target);
   
   // output("T_f");
   
   // output("OK");
   // return ctl.countPtReached();
-  return true;
+  return false;
 }
 
 void PostureDatastoreController_AccEETask::teardown(mc_control::fsm::Controller & ctl_)
