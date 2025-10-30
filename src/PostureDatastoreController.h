@@ -4,6 +4,7 @@
 #include <mc_tasks/CompliantPostureTask.h>
 #include <mc_tasks/PostureTask.h>
 #include <mc_tasks/TorqueTask.h>
+#include <mc_tasks/TransformTask.h>
 
 #include "api.h"
 #include <Eigen/src/Core/Matrix.h>
@@ -27,6 +28,9 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
   std::map<std::string, std::vector<double>> torque_target;
   std::shared_ptr<mc_tasks::PostureTask> postureTask;
   std::shared_ptr<mc_tasks::TorqueTask> torqueTask;
+
+  std::shared_ptr<mc_tasks::TransformTask> accEETask;
+  sva::MotionVecd accEETask_target;
 
   Eigen::Vector3d endEffectorTarget_pt1;
   Eigen::Vector3d endEffectorTarget_pt2;

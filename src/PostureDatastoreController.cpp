@@ -2,6 +2,8 @@
 #include <mc_rtc/gui/ArrayInput.h>
 #include <mc_rtc/gui/NumberInput.h>
 #include <mc_rtc/gui/Rotation.h>
+#include <RBDyn/Jacobian.h>
+#include <SpaceVecAlg/EigenTypedef.h>
 #include <string>
 
 PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config)
@@ -109,6 +111,11 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
   // solver().addTask(compPostureTask);
 
   torqueTask = std::make_shared<mc_tasks::TorqueTask>(solver(), robot().robotIndex());
+
+  accEETask = std::make_shared<mc_tasks::TransformTask>(tool_frame, robots(), robot().robotIndex(), 0.0, 1000.0);
+  accEETask->damping(0.0);
+
+  accEETask_target = sva::MotionVecd::Zero();
 
   logger().addLogEntry("RLController_refAccel", [this]() { return refAccel; });
   logger().addLogEntry("RLController_q_rl", [this]() { return q_rl; });
@@ -241,6 +248,20 @@ void PostureDatastoreController::tasksComputation(void)
   Eigen::VectorXd content = tau_d - Cg;
   if(!compensateExternalForces) content += extTorqueSensor.torques();
   refAccel = M.llt().solve(content);
+
+  // Acceleration End-Effector Task
+  const mc_rbdyn::RobotFrame & frame_tool = robot.frame(tool_frame);
+  rbd::Jacobian jac_tool(robot.mb(), frame_tool.body());
+  Eigen::MatrixXd J_tool = jac_tool.jacobian(robot.mb(), robot.mbc(), frame_tool.X_b_f());
+  sva::MotionVecd current_acc_tool = jac_tool.normalAcceleration(
+                      robot.mb(),
+                      robot.mbc(),
+                      robot.bodyAccB(),   // base normal acceleration = 0
+                      frame_tool.X_b_f(),    // transformation from body to tool frame
+                      sva::MotionVecd::Zero()    // acceleration of the point in body coordinates = 0
+                  );
+  Eigen::Vector6d acc = J_tool * refAccel + current_acc_tool.vector();
+  accEETask_target = sva::MotionVecd(acc.head(3), acc.tail(3));
 }
 
 void PostureDatastoreController::stiffnessAdjustment(void)
