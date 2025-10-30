@@ -184,12 +184,11 @@ bool PostureDatastoreController::run()
   distance_pt3_norm = distance_pt3.norm();
 
   bool run = mc_control::fsm::Controller::run(mc_solver::FeedbackType::ClosedLoopIntegrateReal);
-  robot().forwardKinematics();
-  robot().forwardVelocity();
-  robot().forwardAcceleration();
-  
   if(isPureRL) // Run RL without taking account of the QP
   {
+    robot().forwardKinematics();
+    robot().forwardVelocity();
+    robot().forwardAcceleration();
     // q_cmd = q_rl; **THIS IS NOT WORKING BECAUSE THE POLICY WAS NOT TRAINED WITH THE REAL PD OF THE ROBOT**
     // ** SOLUTION: Simulate the equivalent torque command**
     Eigen::MatrixXd Kp_inv = kp_robot.cwiseInverse().asDiagonal();
@@ -201,8 +200,8 @@ bool PostureDatastoreController::run()
   }
 
   // Use QP
-  computeQPAccelerationInversePD();
-  updateRobotCmdAfterQP();
+  // computeQPAccelerationInversePD();
+  // updateRobotCmdAfterQP();
   return run; // Return false if QP fails
 }
 
@@ -272,7 +271,7 @@ void PostureDatastoreController::updateRobotCmdAfterQP()
     i++;
   }
   // Update q and qdot for position control
-  robot().mbc().q = q;
+  // robot().mbc().q = q;
   if(isRLQP | isPureRL) robot().mbc().alpha = alpha; // For RL policy qdot ref = 0
   // Update joint torques for torque control
   robot().mbc().jointTorque = tau;

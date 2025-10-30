@@ -24,9 +24,9 @@ void PostureDatastoreController_DefaultPosture::start(mc_control::fsm::Controlle
       }
   }
 
-  ctl.endEffectorTarget_pt1 = ctl.endEffectorTarget_pt1_OOD;
-  ctl.endEffectorTarget_pt2 = ctl.endEffectorTarget_pt2_OOD;
-  ctl.endEffectorTarget_pt3 = ctl.endEffectorTarget_pt3_OOD;
+  // ctl.endEffectorTarget_pt1 = ctl.endEffectorTarget_pt1_OOD;
+  // ctl.endEffectorTarget_pt2 = ctl.endEffectorTarget_pt2_OOD;
+  // ctl.endEffectorTarget_pt3 = ctl.endEffectorTarget_pt3_OOD;
 
   ctl.postureTask->reset();
   ctl.postureTask->stiffness(ctl.stiffnessMin);
