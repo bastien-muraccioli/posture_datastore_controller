@@ -94,6 +94,7 @@ kp_policy:
     joint_6: 15.0
     joint_7: 15.0
 
+# The damped one that works well on the real robot
 kd_policy:
     joint_1: 15.0
     joint_2: 15.0
@@ -102,6 +103,17 @@ kd_policy:
     joint_5: 8.5
     joint_6: 8.5
     joint_7: 8.5
+
+# The real one used during training
+# Don't use it, the robot is too oscillatory
+# kd_policy:
+#   joint_1: 1.0
+#   joint_2: 1.0
+#   joint_3: 1.0
+#   joint_4: 1.0
+#   joint_5: 0.5
+#   joint_6: 0.5
+#   joint_7: 0.5
 
 kp_robot:
   joint_1: 100.0
@@ -120,6 +132,8 @@ kd_robot:
   joint_5: 14.14
   joint_6: 14.14
   joint_7: 14.14
+
+tool_frame: "tool_frame"
 
 # kp_position:
 #   joint_1: 25000

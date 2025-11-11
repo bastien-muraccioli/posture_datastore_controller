@@ -4,13 +4,14 @@
 #include <mc_rtc/gui/Rotation.h>
 #include <RBDyn/Jacobian.h>
 #include <SpaceVecAlg/EigenTypedef.h>
+#include <RBDyn/Coriolis.h>
 #include <string>
 
 PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config)
 : mc_control::fsm::Controller(rm, dt, config, Backend::TVM)
 {
 
-  tool_frame = config("tool_frame", (std::string) "FT_adapter");
+  tool_frame = config("tool_frame", (std::string) "tool_frame");
 
   // Initialize the constraints
   selfCollisionConstraint->setCollisionsDampers(solver(), {1.8, 70.0});
@@ -55,6 +56,8 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
   dofNumber = robot().mb().nrDof();
   mc_rtc::log::info("[PostureDatastoreController] Robot has {} DoF", dofNumber);
   refAccel = Eigen::VectorXd::Zero(dofNumber);
+  refVel = Eigen::VectorXd::Zero(dofNumber);
+  refPos = Eigen::VectorXd::Zero(dofNumber);
   q_rl = Eigen::VectorXd::Zero(dofNumber);
   q_rl_last = Eigen::VectorXd::Zero(dofNumber); // Initialize last reference position
   tau_d = Eigen::VectorXd::Zero(dofNumber);
@@ -93,6 +96,7 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
             kp_policy[i] = kp_policy_vector.at(joint_name);
             kd_policy[i] = kd_policy_vector.at(joint_name);
             q_rl[i] = t[0];
+            refPos[i] = t[0];
             mc_rtc::log::info("[PostureDatastoreController] Joint {}: refPos {}, kp {}, kd {}", joint_name, q_rl[i], current_kp[i], current_kd[i]);
             i++;
         }
@@ -105,7 +109,7 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
   // Remove the default posture task created by the FSM
   solver().removeTask(getPostureTask(robot().name()));
 
-  postureTask = std::make_shared<mc_tasks::PostureTask>(solver(), robot().robotIndex(), 1, 1);
+  postureTask = std::make_shared<mc_tasks::CompliantPostureTask>(solver(), robot().robotIndex(), 1, 1);
   postureTask->target(posture_init_rl);
   // compPostureTask->stiffness(stiffnessMin);
   // solver().addTask(compPostureTask);
@@ -117,63 +121,13 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
 
   accEETask_target = sva::MotionVecd::Zero();
 
-  logger().addLogEntry("RLController_refAccel", [this]() { return refAccel; });
-  logger().addLogEntry("RLController_q_rl", [this]() { return q_rl; });
-  logger().addLogEntry("RLController_tau_d", [this]() { return tau_d; });
-  logger().addLogEntry("RLController_kp", [this]() { return current_kp; });
-  logger().addLogEntry("RLController_kd", [this]() { return current_kd; });
-  logger().addLogEntry("RLController_currentPos", [this]() { return currentPos; });
-  logger().addLogEntry("RLController_currentVel", [this]() { return currentVel; });
-  logger().addLogEntry("RLController_q_cmd", [this]() { return q_cmd; });
-  logger().addLogEntry("RLController_ddot_qp", [this]() { return ddot_qp; });
-  logger().addLogEntry("RLController_tau_cmd", [this]() { return tau_cmd; });
-  logger().addLogEntry("RLController_distance_pt1", [this]() { return distance_pt1; });
-  logger().addLogEntry("RLController_distance_pt2", [this]() { return distance_pt2; });
-  logger().addLogEntry("RLController_distance_pt3", [this]() { return distance_pt3; });
-  logger().addLogEntry("RLController_distance_pt1_norm", [this]() { return distance_pt1_norm; });
-  logger().addLogEntry("RLController_distance_pt2_norm", [this]() { return distance_pt2_norm; });
-  logger().addLogEntry("RLController_distance_pt3_norm", [this]() { return distance_pt3_norm; });
-  logger().addLogEntry("RLController_endEffectorTarget_pos", [this]() { return endEffectorTarget_pos; });
-
-  logger().addLogEntry("RLController_convergedToPtTarget", [this]() { return convergedToPtTarget; });
-  logger().addLogEntry("RLController_convergedToPtInit", [this]() { return convergedToPtInit; });
+  addGUI();
+  addLog();
 
   // Kinova Gen3 datastore
   datastore().make<std::string>("ControlMode", "Torque");
   datastore().make<std::string>("TorqueMode", "Custom");
   datastore().make_call("getPostureTask", [this]() -> mc_tasks::PostureTaskPtr { return postureTask; });
-
-  // Add GUI to modify kp and kd
-  gui()->addElement({"PostureDatastoreController"},
-    mc_rtc::gui::ArrayInput("Kp Vector",
-      [this]() { return current_kp; },
-      [this](const Eigen::VectorXd & v) { current_kp = v; }),
-    mc_rtc::gui::ArrayInput("Kd Vector",
-      [this]() { return current_kd; },
-      [this](const Eigen::VectorXd & v) { current_kd = v; }),
-    mc_rtc::gui::NumberInput("Kp",
-      [this]() { return kp_value; },
-      [this](const double v) {
-        kp_value = v;
-        for(size_t i = 0; i < current_kp.size(); ++i)
-        {
-          current_kp[i] = kp_value;
-        }
-      }),
-    mc_rtc::gui::NumberInput("Kd",
-      [this]() { return kd_value; },
-      [this](const double v) {
-        kd_value = v;
-        for(size_t i = 0; i < current_kd.size(); ++i)
-        {
-          current_kd[i] = kd_value;
-        }
-      }),
-    mc_rtc::gui::Point3DRO("pt1", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(0.0, 0.0, 1.0), 0.03), endEffectorTarget_pt1),
-    mc_rtc::gui::Point3DRO("pt2", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(0.0, 1.0, 0.0), 0.03), endEffectorTarget_pt2),
-    mc_rtc::gui::Point3DRO("pt3", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1.0, 0.0, 0.0), 0.03), endEffectorTarget_pt3),
-    mc_rtc::gui::Point3DRO("endEffectorTarget_pos", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1.0, 1.0, 0.0), 0.03), endEffectorTarget_pos)
-    );
 
   mc_rtc::log::success("PostureDatastoreController init done ");
 }
@@ -191,25 +145,26 @@ bool PostureDatastoreController::run()
   distance_pt3_norm = distance_pt3.norm();
 
   bool run = mc_control::fsm::Controller::run(mc_solver::FeedbackType::ClosedLoopIntegrateReal);
-  robot().forwardKinematics();
-  robot().forwardVelocity();
-  robot().forwardAcceleration();
+  
   
   if(isPureRL) // Run RL without taking account of the QP
   {
+    robot().forwardKinematics();
+    robot().forwardVelocity();
+    robot().forwardAcceleration();
     // q_cmd = q_rl; **THIS IS NOT WORKING BECAUSE THE POLICY WAS NOT TRAINED WITH THE REAL PD OF THE ROBOT**
     // ** SOLUTION: Simulate the equivalent torque command**
-    Eigen::MatrixXd Kp_inv = kp_robot.cwiseInverse().asDiagonal();
-    Eigen::VectorXd Kd = kd_robot - kd_policy;
+    // Eigen::MatrixXd Kp_inv = kp_robot.cwiseInverse().asDiagonal();
+    // Eigen::VectorXd Kd = kd_robot - kd_policy;
     tau_cmd = kp_policy.cwiseProduct(q_rl - currentPos) - kd_policy.cwiseProduct(currentVel);
     q_cmd = computeInversePD(tau_cmd);
     updateRobotCmdAfterQP();
     return true;
   }
 
-  // Use QP
-  computeQPAccelerationInversePD();
-  updateRobotCmdAfterQP();
+  // // Use QP
+  // computeQPAccelerationInversePD();
+  // updateRobotCmdAfterQP();
   return run; // Return false if QP fails
 }
 
@@ -247,22 +202,38 @@ void PostureDatastoreController::tasksComputation(void)
   Eigen::VectorXd Cg = fd.C();
   Eigen::VectorXd content = tau_d - Cg;
   if(!compensateExternalForces) content += extTorqueSensor.torques();
+  
+  // // WTF BRO -----------------------------------------
+  // auto coriolis = new rbd::Coriolis(robot.mb());
+  // Eigen::MatrixXd coriolisMatrix = coriolis->coriolis(robot.mb(), robot.mbc());
+  // Eigen::VectorXd gravity_term = Cg - coriolisMatrix * currentVel;
+  // tau_d = kp_policy.cwiseProduct(q_rl - refPos) - kd_policy.cwiseProduct(refVel);
+  // content = tau_d - coriolisMatrix*refVel - gravity_term + extTorqueSensor.torques();
+  // refVel += refAccel * timeStep;
+  // refPos += refVel * timeStep;
+  // // ------------------------------------------------
+
   refAccel = M.llt().solve(content);
 
+
   // Acceleration End-Effector Task
-  const mc_rbdyn::RobotFrame & frame_tool = robot.frame(tool_frame);
-  rbd::Jacobian jac_tool(robot.mb(), frame_tool.body());
+  const mc_rbdyn::RobotFrame & frame_tool = real_robot.frame(tool_frame);
+  rbd::Jacobian jac_tool(real_robot.mb(), frame_tool.body());
 
   // Compute Jacobian in body frame
-  Eigen::MatrixXd J_tool = jac_tool.jacobian(robot.mb(), robot.mbc(), frame_tool.X_b_f());
+  Eigen::MatrixXd J_tool = jac_tool.jacobian(real_robot.mb(), real_robot.mbc(), frame_tool.X_b_f());
+  // std::cout << "Jacobian tool frame:\n" << J_tool << std::endl;
 
   // Compute current bias (normal) acceleration term
-  sva::MotionVecd current_acc_tool = jac_tool.bodyNormalAcceleration(robot.mb(), robot.mbc());
+  sva::MotionVecd jdotalpha = jac_tool.bodyNormalAcceleration(real_robot.mb(), real_robot.mbc());
 
-  mc_rtc::log::info("[EE Acc Task] Current EE acceleration: {}", current_acc_tool.vector().transpose());
+  // mc_rtc::log::info("[EE Acc Task] Current EE jdotalpha: {}", jdotalpha.vector().transpose());
 
   // Compute desired end-effector acceleration (in body frame)
-  Eigen::Vector6d acc_tool = J_tool * refAccel + current_acc_tool.vector();
+  //dot{alpha} = J*ddot{q}_d + dot{J}*dot{q}
+  Eigen::Vector6d acc_tool = J_tool * refAccel + jdotalpha.vector();
+
+  // mc_rtc::log::info("[EE Acc Task] Desired EE acc (body frame): {}", acc_tool.transpose());
 
   // Convert to world frame
   Eigen::Matrix3d R = real_robot.bodyPosW(frame_tool.body()).rotation();
@@ -274,6 +245,68 @@ void PostureDatastoreController::tasksComputation(void)
   // Log & set reference
   mc_rtc::log::info("[EE Acc Task] Target EE acceleration: {}", acc_world.transpose());
   accEETask_target = sva::MotionVecd(acc_world.head<3>(), acc_world.tail<3>());
+}
+
+void PostureDatastoreController::addGUI()
+{
+  // Add GUI to modify kp and kd
+  gui()->addElement({"PostureDatastoreController"},
+    mc_rtc::gui::ArrayInput("Kp Vector",
+      [this]() { return current_kp; },
+      [this](const Eigen::VectorXd & v) { current_kp = v; }),
+    mc_rtc::gui::ArrayInput("Kd Vector",
+      [this]() { return current_kd; },
+      [this](const Eigen::VectorXd & v) { current_kd = v; }),
+    mc_rtc::gui::NumberInput("Kp",
+      [this]() { return kp_value; },
+      [this](const double v) {
+        kp_value = v;
+        for(size_t i = 0; i < current_kp.size(); ++i)
+        {
+          current_kp[i] = kp_value;
+        }
+      }),
+    mc_rtc::gui::NumberInput("Kd",
+      [this]() { return kd_value; },
+      [this](const double v) {
+        kd_value = v;
+        for(size_t i = 0; i < current_kd.size(); ++i)
+        {
+          current_kd[i] = kd_value;
+        }
+      }),
+    mc_rtc::gui::Point3DRO("pt1", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(0.0, 0.0, 1.0), 0.03), endEffectorTarget_pt1),
+    mc_rtc::gui::Point3DRO("pt2", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(0.0, 1.0, 0.0), 0.03), endEffectorTarget_pt2),
+    mc_rtc::gui::Point3DRO("pt3", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1.0, 0.0, 0.0), 0.03), endEffectorTarget_pt3),
+    mc_rtc::gui::Point3DRO("endEffectorTarget_pos", mc_rtc::gui::PointConfig(mc_rtc::gui::Color(1.0, 1.0, 0.0), 0.03), endEffectorTarget_pos),
+
+    // Boolean to compensate external forces
+    mc_rtc::gui::Checkbox("Compensate External Forces", compensateExternalForces)
+    );
+}
+
+void PostureDatastoreController::addLog()
+{
+  logger().addLogEntry("RLController_refAccel", [this]() { return refAccel; });
+  logger().addLogEntry("RLController_q_rl", [this]() { return q_rl; });
+  logger().addLogEntry("RLController_tau_d", [this]() { return tau_d; });
+  logger().addLogEntry("RLController_kp", [this]() { return current_kp; });
+  logger().addLogEntry("RLController_kd", [this]() { return current_kd; });
+  logger().addLogEntry("RLController_currentPos", [this]() { return currentPos; });
+  logger().addLogEntry("RLController_currentVel", [this]() { return currentVel; });
+  logger().addLogEntry("RLController_q_cmd", [this]() { return q_cmd; });
+  logger().addLogEntry("RLController_ddot_qp", [this]() { return ddot_qp; });
+  logger().addLogEntry("RLController_tau_cmd", [this]() { return tau_cmd; });
+  logger().addLogEntry("RLController_distance_pt1", [this]() { return distance_pt1; });
+  logger().addLogEntry("RLController_distance_pt2", [this]() { return distance_pt2; });
+  logger().addLogEntry("RLController_distance_pt3", [this]() { return distance_pt3; });
+  logger().addLogEntry("RLController_distance_pt1_norm", [this]() { return distance_pt1_norm; });
+  logger().addLogEntry("RLController_distance_pt2_norm", [this]() { return distance_pt2_norm; });
+  logger().addLogEntry("RLController_distance_pt3_norm", [this]() { return distance_pt3_norm; });
+  logger().addLogEntry("RLController_endEffectorTarget_pos", [this]() { return endEffectorTarget_pos; });
+
+  logger().addLogEntry("RLController_convergedToPtTarget", [this]() { return convergedToPtTarget; });
+  logger().addLogEntry("RLController_convergedToPtInit", [this]() { return convergedToPtInit; });
 }
 
 void PostureDatastoreController::stiffnessAdjustment(void)
@@ -305,8 +338,8 @@ void PostureDatastoreController::updateRobotCmdAfterQP()
     i++;
   }
   // Update q and qdot for position control
-  robot().mbc().q = q;
-  if(isRLQP | isPureRL) robot().mbc().alpha = alpha; // For RL policy qdot ref = 0
+  // robot().mbc().q = q;
+  // if(isRLQP | isPureRL) robot().mbc().alpha = alpha; // For RL policy qdot ref = 0
   // Update joint torques for torque control
   robot().mbc().jointTorque = tau;
 

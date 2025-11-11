@@ -1,10 +1,10 @@
-#include "PostureDatastoreController_AccEETask.h"
+#include "PostureDatastoreController_AccEETaskNullSpace.h"
 
 #include "../PostureDatastoreController.h"
 
-void PostureDatastoreController_AccEETask::configure(const mc_rtc::Configuration & config) {}
+void PostureDatastoreController_AccEETaskNullSpace::configure(const mc_rtc::Configuration & config) {}
 
-void PostureDatastoreController_AccEETask::start(mc_control::fsm::Controller & ctl_)
+void PostureDatastoreController_AccEETaskNullSpace::start(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.datastore().assign<std::string>("ControlMode", "Torque");
@@ -13,20 +13,21 @@ void PostureDatastoreController_AccEETask::start(mc_control::fsm::Controller & c
   ctl.kp_value = ctl.current_kp[0];
   ctl.kd_value = ctl.current_kd[0];
   ctl.postureTask->stiffness(0.0);
-  ctl.postureTask->damping(0.0);
+  ctl.postureTask->damping(1.0);
   ctl.tasksComputation();
   // ctl.accEETask.reset();
   auto & realRobot = ctl.realRobot(ctl.robot().name());
   auto endEffectorTarget_pos = realRobot.mbc().bodyPosW[realRobot.bodyIndexByName(ctl.tool_frame)];
   ctl.accEETask->target(endEffectorTarget_pos);
   ctl.accEETask->refAccel(ctl.accEETask_target);
-  ctl.postureTask->refAccel(ctl.refAccel);
+  Eigen::VectorXd zero_accel = Eigen::VectorXd::Zero(ctl.refAccel.size());
+  ctl.postureTask->refAccel(zero_accel);
   ctl.postureTask->weight(1.0);
   ctl.solver().addTask(ctl.postureTask);
   ctl.solver().addTask(ctl.accEETask);
 }
 
-bool PostureDatastoreController_AccEETask::run(mc_control::fsm::Controller & ctl_)
+bool PostureDatastoreController_AccEETaskNullSpace::run(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
                       
@@ -48,8 +49,7 @@ bool PostureDatastoreController_AccEETask::run(mc_control::fsm::Controller & ctl
       }
     }
   }
-  ctl.tasksComputation();  
-  ctl.postureTask->refAccel(ctl.refAccel);
+  ctl.tasksComputation();
   auto & realRobot = ctl.realRobot(ctl.robot().name());
   auto endEffectorTarget_pos = realRobot.mbc().bodyPosW[realRobot.bodyIndexByName(ctl.tool_frame)];
   ctl.accEETask->target(endEffectorTarget_pos);
@@ -62,7 +62,7 @@ bool PostureDatastoreController_AccEETask::run(mc_control::fsm::Controller & ctl
   return false;
 }
 
-void PostureDatastoreController_AccEETask::teardown(mc_control::fsm::Controller & ctl_)
+void PostureDatastoreController_AccEETaskNullSpace::teardown(mc_control::fsm::Controller & ctl_)
 {
   auto & ctl = static_cast<PostureDatastoreController &>(ctl_);
   ctl.solver().removeTask(ctl.postureTask);
@@ -70,4 +70,4 @@ void PostureDatastoreController_AccEETask::teardown(mc_control::fsm::Controller 
   ctl.cleanState();
 }
 
-EXPORT_SINGLE_STATE("PostureDatastoreController_AccEETask", PostureDatastoreController_AccEETask)
+EXPORT_SINGLE_STATE("PostureDatastoreController_AccEETaskNullSpace", PostureDatastoreController_AccEETaskNullSpace)

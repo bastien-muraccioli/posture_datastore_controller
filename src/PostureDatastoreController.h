@@ -17,6 +17,10 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
 
   void reset(const mc_control::ControllerResetData & reset_data) override;
 
+  void addGUI();
+
+  void addLog();
+
   bool countPtReached();
 
   void cleanState();
@@ -26,7 +30,7 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
   std::map<std::string, std::vector<double>> posture_init_rl;
   std::map<std::string, std::vector<double>> posture_init_default;
   std::map<std::string, std::vector<double>> torque_target;
-  std::shared_ptr<mc_tasks::PostureTask> postureTask;
+  std::shared_ptr<mc_tasks::CompliantPostureTask> postureTask;
   std::shared_ptr<mc_tasks::TorqueTask> torqueTask;
 
   std::shared_ptr<mc_tasks::TransformTask> accEETask;
@@ -76,6 +80,8 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
   std::vector<std::string> jointNames;
 
   Eigen::VectorXd refAccel;
+  Eigen::VectorXd refVel;
+  Eigen::VectorXd refPos;
   Eigen::VectorXd q_rl;
   Eigen::VectorXd q_rl_last; // Last reference position used in the RL controller
   Eigen::VectorXd tau_d;
