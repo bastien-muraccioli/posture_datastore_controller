@@ -121,6 +121,10 @@ PostureDatastoreController::PostureDatastoreController(mc_rbdyn::RobotModulePtr 
 
   accEETask_target = sva::MotionVecd::Zero();
 
+  wrenchTask =  std::make_shared<mc_tasks::WrenchTask>(tool_frame, robots(), robot().robotIndex());
+  wrenchTask_target = sva::ForceVecd::Zero();
+  dynamicJacTransposeMat_ = Eigen::MatrixXd::Zero(robot().mb().nrDof(), 6);
+
   addGUI();
   addLog();
 
@@ -243,8 +247,13 @@ void PostureDatastoreController::tasksComputation(void)
   Eigen::Vector6d acc_world = Adt * acc_tool;
 
   // Log & set reference
-  mc_rtc::log::info("[EE Acc Task] Target EE acceleration: {}", acc_world.transpose());
+  // mc_rtc::log::info("[EE Acc Task] Target EE acceleration: {}", acc_world.transpose());
   accEETask_target = sva::MotionVecd(acc_world.head<3>(), acc_world.tail<3>());
+
+  // Wrench Task
+  computeDynamicJacobian();
+  Eigen::VectorXd wrenchVec = dynamicJacTransposeMat_.transpose() * tau_d;
+  wrenchTask_target = sva::ForceVecd(wrenchVec.head<3>(), wrenchVec.tail<3>());
 }
 
 void PostureDatastoreController::addGUI()
@@ -438,4 +447,36 @@ void PostureDatastoreController::cleanState()
   convergedToPtInit = false;
   convergedToPtTarget = false;
   alreadyReachedPtTarget = false;
+}
+
+void PostureDatastoreController::computeDynamicJacobian()
+{
+  auto & robot = robots()[0];
+  auto & real_robot = realRobot(robots()[0].name());
+  const mc_rbdyn::RobotFrame & frame_tool = real_robot.frame(tool_frame);
+  rbd::Jacobian jac_tool(real_robot.mb(), frame_tool.body());
+
+  Eigen::MatrixXd shortJacMat = jac_tool.jacobian(real_robot.mb(), real_robot.mbc(), frame_tool.X_b_f());
+  Eigen::MatrixXd jacMat = Eigen::MatrixXd(6, robot.mb().nrDof());
+  
+  jac_tool.fullJacobian(robot.mb(), shortJacMat, jacMat);
+
+  rbd::ForwardDynamics fd(real_robot.mb());
+  fd.computeH(real_robot.mb(), real_robot.mbc());
+  fd.computeC(real_robot.mb(), real_robot.mbc());
+  Eigen::MatrixXd H = fd.H();
+
+  // 1. Factorize H (SPD)
+  Eigen::LDLT<Eigen::MatrixXd> H_ldlt(H);
+
+  // 2. Compute M^{-1} J^T
+  Eigen::MatrixXd MinvJt = H_ldlt.solve(jacMat.transpose());
+
+  // 3. Compute Lambda = (J M^{-1} J^T)^{-1} using LDLT
+  Eigen::MatrixXd JMJM = jacMat * MinvJt;
+  Eigen::MatrixXd lambda = JMJM.ldlt()
+      .solve(Eigen::MatrixXd::Identity(JMJM.rows(), JMJM.cols()));
+
+  // 4. Compute dynamically consistent J^#
+  dynamicJacTransposeMat_ = MinvJt * lambda;
 }

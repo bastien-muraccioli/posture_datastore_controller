@@ -4,6 +4,7 @@
 #include <mc_tasks/CompliantPostureTask.h>
 #include <mc_tasks/PostureTask.h>
 #include <mc_tasks/TorqueTask.h>
+#include <mc_tasks/WrenchTask.h>
 #include <mc_tasks/TransformTask.h>
 
 #include "api.h"
@@ -35,6 +36,10 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
 
   std::shared_ptr<mc_tasks::TransformTask> accEETask;
   sva::MotionVecd accEETask_target;
+
+  std::shared_ptr<mc_tasks::WrenchTask> wrenchTask;
+  sva::ForceVecd wrenchTask_target;
+  Eigen::MatrixXd dynamicJacTransposeMat_;
 
   Eigen::Vector3d endEffectorTarget_pt1;
   Eigen::Vector3d endEffectorTarget_pt2;
@@ -124,6 +129,7 @@ struct PostureDatastoreController_DLLAPI PostureDatastoreController : public mc_
   std::tuple<Eigen::VectorXd, Eigen::VectorXd> getPDGains();
   bool setPDGains(Eigen::VectorXd p_vec, Eigen::VectorXd d_vec);
   bool isHighGain(double tol = 1e-9);
+  void computeDynamicJacobian();
 
 private:
   mc_rtc::Configuration config_;
